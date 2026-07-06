@@ -2,22 +2,19 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import gameRoutes from './routes/games.js';   // ← NEW
 
 dotenv.config();
 
 const app = express();
 
-// middleware
-app.use(cors());              // allow frontend (Vercel) to hit backend (EC2)
-app.use(express.json());      // parse JSON request bodies
+app.use(cors());
+app.use(express.json());
 
-// health check — proves the server is alive
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'chessarena-backend' });
 });
 
-// routes go here later (auth, games, history)
-// app.use('/api/auth', authRoutes);
-// app.use('/api/games', gameRoutes);
+app.use('/api/games', gameRoutes);            // ← NEW
 
 export default app;
