@@ -1,5 +1,6 @@
-// historyService.js — saves finished games to PostgreSQL and reads them back
+// historyService.js — saves finished games (PostgreSQL + replay file on S3) and reads them back
 import prisma from '../config/db.js';
+import { s3Enabled, uploadReplay, downloadReplay } from './replayStore.js';
 import { HttpError } from '../utils/httpError.js';
 
 const players = {
@@ -12,8 +13,8 @@ const toPgn = (moves) =>
   moves.map((san, i) => (i % 2 === 0 ? `${i / 2 + 1}. ${san}` : san)).join(' ');
 
 // game = finished game state from gameService
-export const saveFinishedGame = (game) =>
-  prisma.game.create({
+export const saveFinishedGame = async (game) => {
+  const { whiteId, blackId, ...replay } = await prisma.game.create({
     data: {
       id: game.id,
       whiteId: game.white.id,
@@ -24,7 +25,11 @@ export const saveFinishedGame = (game) =>
       pgn: toPgn(game.history),
       startedAt: game.startedAt,
     },
+    include: players,
   });
+
+  if (s3Enabled()) await uploadReplay(replay);
+};
 
 // the user's games, newest first (without the move list, to keep it small)
 export const listUserGames = async (userId, limit = 50) => {
@@ -37,8 +42,13 @@ export const listUserGames = async (userId, limit = 50) => {
   return games.map(({ moves, ...game }) => ({ ...game, moveCount: moves.length }));
 };
 
-// one game with every move, for replay
+// one game with every move, for replay — from S3 when enabled, else the database
 export const getReplay = async (id) => {
+  if (s3Enabled()) {
+    const replay = await downloadReplay(id);
+    if (replay) return replay;
+  }
+
   const game = await prisma.game.findUnique({ where: { id }, include: players });
   if (!game) throw new HttpError(404, 'Game not found in history');
 

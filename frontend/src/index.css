@@ -1,0 +1,18 @@
+body { margin: 0; font-family: system-ui, sans-serif; background: #f2f2f2; color: #222; }
+button { margin: 4px; padding: 6px 12px; cursor: pointer; }
+input { padding: 6px; margin: 4px 0; }
+a { color: #2563eb; cursor: pointer; }
+code { font-size: 12px; }
+
+.app { max-width: 960px; margin: 0 auto; padding: 16px; }
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+header b { font-size: 20px; cursor: pointer; }
+
+.card { max-width: 480px; margin: 40px auto; padding: 24px; background: #fff; border-radius: 8px; display: flex; flex-direction: column; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.error { color: #c00; }
+
+.game { display: flex; flex-wrap: wrap; gap: 24px; }
+.board { width: min(480px, 100%); }
+.panel { flex: 1; min-width: 240px; }
+.moves { max-height: 200px; overflow-y: auto; }

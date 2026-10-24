@@ -7,7 +7,7 @@ Real-time multiplayer chess: Node.js, Express, Socket.io, PostgreSQL (Supabase +
 - [x] Real-time multiplayer with Socket.io: rooms, white/black players, turns, spectators, resign, draws
 - [x] Game history in PostgreSQL: finished games (players, result, moves) are saved for history and replay; live games leave memory 1 minute after they end
 - [x] Load test (concurrent games, latency) — see below
-- [ ] React frontend
+- [x] React frontend (minimal): login, lobby, live board, spectating, history, replay
 - [ ] Deployment (Vercel, AWS EC2, S3)
 
 ## Backend
@@ -40,6 +40,19 @@ backend/
     ├── sockets/gameSocket.js      # real-time events
     └── utils/httpError.js         # error with HTTP status
 ```
+
+## Frontend
+
+```bash
+cd frontend
+cp .env.example .env   # VITE_API_URL = backend address
+npm install
+npm run dev            # http://localhost:5173
+```
+
+React + Vite, `react-chessboard` for the board, `socket.io-client` for live play. Pages (switched by state in `App.jsx`): login/signup, lobby, game (players + spectators), history, replay. Pawns always promote to a queen.
+
+## Backend details
 
 ### Load test
 `scripts/loadTest.js` logs in 2 players per game, plays random legal games concurrently over Socket.io and measures **move sync latency**: the time from a player sending a move until the opponent receives it.

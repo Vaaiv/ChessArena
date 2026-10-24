@@ -21,7 +21,7 @@ const handle = (fn) => async (payload, ack) => {
 };
 
 export const setupSockets = (server) => {
-  const io = new Server(server, { cors: { origin: process.env.CLIENT_URL ?? '*' } });
+  const io = new Server(server, { cors: { origin: process.env.CLIENT_URL || '*' } });
 
   // only logged-in users can connect; client sends io(url, { auth: { token } })
   io.use(async (socket, next) => {
@@ -58,7 +58,7 @@ export const setupSockets = (server) => {
     socket.on('game:join', handle(({ gameId }) => {
       const { game, color } = gameService.joinGame(gameId, user);
       socket.join(room(game.id));
-      socket.to(room(game.id)).emit('player:joined', { user, color });
+      socket.to(room(game.id)).emit('player:joined', { gameId: game.id, user, color });
       emitUpdate(game);
       return { game, color };
     }));
@@ -90,7 +90,7 @@ export const setupSockets = (server) => {
     // tell rooms this user left (they can come back with game:join)
     socket.on('disconnecting', () => {
       for (const r of socket.rooms) {
-        if (r.startsWith('game:')) socket.to(r).emit('player:left', { user });
+        if (r.startsWith('game:')) socket.to(r).emit('player:left', { gameId: r.slice('game:'.length), user });
       }
     });
   });
