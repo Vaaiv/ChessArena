@@ -3,11 +3,12 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import gameRoutes from './routes/games.js';
+import authRoutes from './routes/auth.js';
 
 dotenv.config();
 
 const app = express();
-
+ 
 app.use(cors());
 app.use(express.json());
 
@@ -15,6 +16,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'chessarena-backend' });
 });
 
+app.use('/api/auth', authRoutes);
 app.use('/api/games', gameRoutes);
 
 // unknown routes

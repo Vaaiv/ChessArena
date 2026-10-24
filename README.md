@@ -54,4 +54,13 @@ Game state:
 }
 ```
 
+### Auth API
+| Method | Path | Body / headers | Response |
+|---|---|---|---|
+| POST | `/api/auth/signup` | `{ username, email, password }` | `201 { user, token }` |
+| POST | `/api/auth/login` | `{ email, password }` | `{ user, token }` |
+| GET | `/api/auth/me` | header `Authorization: Bearer <token>` | `{ user }` |
+
+Users are stored in Supabase Postgres via Prisma. Passwords are hashed with bcrypt; tokens are JWTs valid for 7 days.
+
 Errors return `{ error: "message" }` with `400` (bad input, illegal move, game over) or `404` (unknown game/route).
