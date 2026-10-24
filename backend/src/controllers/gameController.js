@@ -1,24 +1,31 @@
 // gameController.js — HTTP req/res, delegates to service
-import { applyMove, startingFen } from '../services/gameService.js';
+import { createGame, getGame, applyMove } from '../services/gameService.js';
+import { HttpError } from '../utils/httpError.js';
 
-// GET /api/games/start
-export const getStartingPosition = (req, res) => {
-  res.json({ fen: startingFen() });
+const SQUARE = /^[a-h][1-8]$/;
+const PROMOTIONS = ['q', 'r', 'b', 'n'];
+
+// POST /api/games
+export const create = (req, res) => {
+  res.status(201).json(createGame());
 };
 
-// POST /api/games/move
-// body: { fen: "...", move: { from: "e2", to: "e4" } }
+// GET /api/games/:id
+export const show = (req, res) => {
+  res.json(getGame(req.params.id));
+};
+
+// POST /api/games/:id/move
+// body: { from: "e2", to: "e4", promotion?: "q" }
 export const makeMove = (req, res) => {
-  const { fen, move } = req.body;
+  const { from, to, promotion } = req.body ?? {};
 
-  if (!fen || !move) {
-    return res.status(400).json({ error: 'fen and move are required' });
+  if (!SQUARE.test(from) || !SQUARE.test(to)) {
+    throw new HttpError(400, 'from and to must be squares like "e2"');
+  }
+  if (promotion !== undefined && !PROMOTIONS.includes(promotion)) {
+    throw new HttpError(400, 'promotion must be one of q, r, b, n');
   }
 
-  try {
-    const state = applyMove(fen, move);
-    res.json(state);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
+  res.json(applyMove(req.params.id, { from, to, promotion }));
 };
