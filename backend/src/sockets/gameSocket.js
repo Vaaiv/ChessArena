@@ -2,6 +2,7 @@
 import { Server } from 'socket.io';
 import * as gameService from '../services/gameService.js';
 import { verifyToken, getUserById } from '../services/authService.js';
+import { saveFinishedGame } from '../services/historyService.js';
 
 const room = (gameId) => `game:${gameId}`;
 
@@ -37,7 +38,16 @@ export const setupSockets = (server) => {
     const { user } = socket.data;
 
     // send the latest game state to everyone in the room (players + spectators)
-    const broadcast = (game, extra = {}) => io.to(room(game.id)).emit('game:update', { game, ...extra });
+    const emitUpdate = (game, extra = {}) => io.to(room(game.id)).emit('game:update', { game, ...extra });
+
+    // after a move/resign/draw: emit, then save the game if that action ended it
+    // (players don't wait for the DB)
+    const broadcast = (game, extra = {}) => {
+      emitUpdate(game, extra);
+      if (game.status === 'finished') {
+        saveFinishedGame(game).catch((err) => console.error('Failed to save game history', err));
+      }
+    };
 
     socket.on('game:create', handle(() => {
       const game = gameService.createGame(user);
@@ -49,7 +59,7 @@ export const setupSockets = (server) => {
       const { game, color } = gameService.joinGame(gameId, user);
       socket.join(room(game.id));
       socket.to(room(game.id)).emit('player:joined', { user, color });
-      broadcast(game);
+      emitUpdate(game);
       return { game, color };
     }));
 

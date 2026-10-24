@@ -117,6 +117,18 @@ test('draw offers: decline, accept, and moving cancels an offer', () => {
   assert.equal(game.reason, 'agreement');
 });
 
+test('finished games are deleted after the grace period', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const id = newActiveGame();
+  games.resign(id, alice.id);
+
+  t.mock.timers.tick(games.FINISHED_GAME_TTL_MS - 1);
+  assert.equal(games.getGame(id).status, 'finished');
+
+  t.mock.timers.tick(1);
+  assert.throws(() => games.getGame(id), (err) => err.status === 404);
+});
+
 test('unknown game id throws 404', () => {
   assert.throws(() => games.getGame('nope'), (err) => err.status === 404);
 });

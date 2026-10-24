@@ -5,7 +5,7 @@ Real-time multiplayer chess: Node.js, Express, Socket.io, PostgreSQL (Supabase +
 - [x] REST backend: server-held games, move validation, check/checkmate/draw detection
 - [x] Auth: signup/login with bcrypt + JWT, users in PostgreSQL
 - [x] Real-time multiplayer with Socket.io: rooms, white/black players, turns, spectators, resign, draws
-- [ ] Game history in PostgreSQL
+- [x] Game history in PostgreSQL: finished games (players, result, moves) are saved for history and replay; live games leave memory 1 minute after they end
 - [ ] Load test (concurrent games, latency)
 - [ ] React frontend
 - [ ] Deployment (Vercel, AWS EC2, S3)
@@ -24,7 +24,7 @@ npm test
 ### Structure
 ```
 backend/
-├── prisma/schema.prisma           # database tables (User)
+├── prisma/schema.prisma           # database tables (User, Game)
 ├── prisma.config.ts               # Prisma CLI settings (uses DIRECT_URL)
 └── src/
     ├── server.js                  # entry point: starts Express + Socket.io
@@ -36,6 +36,7 @@ backend/
     ├── services/authService.js    # passwords, tokens, users
     ├── services/gameService.js    # chess.js + game rules
     ├── services/gameStore.js      # in-memory live games
+    ├── services/historyService.js # finished games in PostgreSQL
     ├── sockets/gameSocket.js      # real-time events
     └── utils/httpError.js         # error with HTTP status
 ```
@@ -49,6 +50,8 @@ backend/
 | GET | `/api/auth/me` | header `Authorization: Bearer <token>` | `{ user }` |
 | GET | `/api/games` | — | `{ games }` waiting for an opponent |
 | GET | `/api/games/:id` | — | game state |
+| GET | `/api/history` | header `Authorization: Bearer <token>` | `{ games }` your finished games, newest first |
+| GET | `/api/history/:id` | header `Authorization: Bearer <token>` | one finished game with `moves` for replay |
 
 Errors return `{ error: "message" }` with `400`, `401`, `403`, `404` or `409`.
 

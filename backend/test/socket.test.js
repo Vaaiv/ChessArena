@@ -12,6 +12,7 @@ let io;
 let base;
 const tag = `sock_${Date.now().toString(36)}`;
 const sockets = {}; // alice + bob play, carol spectates
+const tokens = {};
 
 const open = (token) => connect(base, { auth: { token }, transports: ['websocket'], forceNew: true });
 
@@ -34,6 +35,7 @@ before(async () => {
 
   for (const name of ['alice', 'bob', 'carol']) {
     const { token } = await signup({ username: `${tag}_${name}`, email: `${tag}_${name}@example.com`, password: 'secret123' });
+    tokens[name] = token;
     sockets[name] = open(token);
     await next(sockets[name], 'connect');
   }
@@ -129,6 +131,51 @@ test('resign and draw agreement', async () => {
   await bobSeesOffer;
   const drawn = await sockets.bob.emitWithAck('game:answerDraw', { gameId: drawId, accept: true });
   assert.equal(drawn.game.result, '1/2-1/2');
+});
+
+const getJson = async (path, token) => {
+  const res = await fetch(base + path, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  return { status: res.status, body: await res.json() };
+};
+
+// history is saved in the background, so poll briefly until it shows up
+const waitForHistory = async (token, gameId) => {
+  for (let i = 0; i < 50; i++) {
+    const { body } = await getJson('/api/history', token);
+    const game = body.games?.find((g) => g.id === gameId);
+    if (game) return game;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error('game never appeared in history');
+};
+
+test('finished games are saved to history and can be replayed', async () => {
+  const gameId = await startGame();
+  for (const [player, from, to] of [['alice', 'f2', 'f3'], ['bob', 'e7', 'e5'], ['alice', 'g2', 'g4'], ['bob', 'd8', 'h4']]) {
+    await sockets[player].emitWithAck('game:move', { gameId, from, to });
+  }
+
+  const summary = await waitForHistory(tokens.alice, gameId);
+  assert.equal(summary.result, '0-1');
+  assert.equal(summary.reason, 'checkmate');
+  assert.equal(summary.moveCount, 4);
+  assert.equal(summary.white.username, `${tag}_alice`);
+
+  // it's in bob's history too, but not carol's
+  assert.ok(await waitForHistory(tokens.bob, gameId));
+  const carols = await getJson('/api/history', tokens.carol);
+  assert.ok(!carols.body.games.some((g) => g.id === gameId));
+
+  const { status, body: replay } = await getJson(`/api/history/${gameId}`, tokens.carol);
+  assert.equal(status, 200);
+  assert.deepEqual(replay.moves, ['f3', 'e5', 'g4', 'Qh4#']);
+  assert.equal(replay.black.username, `${tag}_bob`);
+  assert.equal(replay.whiteId, undefined);
+});
+
+test('history needs login and unknown replays return 404', async () => {
+  assert.equal((await getJson('/api/history')).status, 401);
+  assert.equal((await getJson('/api/history/nope', tokens.alice)).status, 404);
 });
 
 test('opponent is told when a player disconnects', async () => {

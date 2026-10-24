@@ -4,6 +4,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import gameRoutes from './routes/games.js';
 import authRoutes from './routes/auth.js';
+import historyRoutes from './routes/history.js';
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.get('/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/games', gameRoutes);
+app.use('/api/history', historyRoutes);
 
 // unknown routes
 app.use((req, res) => {

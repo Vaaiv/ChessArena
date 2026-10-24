@@ -1,11 +1,14 @@
 // gameService.js — chess.js logic + game rules (players, turns, results)
 import { randomUUID } from 'crypto';
 import { Chess } from 'chess.js';
-import { saveGame, findGame, listGames } from './gameStore.js';
+import { saveGame, findGame, listGames, deleteGame } from './gameStore.js';
 import { HttpError } from '../utils/httpError.js';
 
 const SQUARE = /^[a-h][1-8]$/;
 const PROMOTIONS = ['q', 'r', 'b', 'n'];
+
+// finished games are not kept: removed from memory this long after they end
+export const FINISHED_GAME_TTL_MS = 60 * 1000;
 
 // turn a stored game into the JSON clients see
 const toState = (game) => ({
@@ -22,6 +25,7 @@ const toState = (game) => ({
   history: game.chess.history(),  // SAN moves, e.g. ['e4', 'e5']
   pgn: game.chess.pgn(),
   createdAt: game.createdAt,
+  startedAt: game.startedAt,      // when black joined, null while waiting
 });
 
 const getOrThrow = (id) => {
@@ -55,6 +59,9 @@ const finish = (game, result, reason) => {
   game.result = result;
   game.reason = reason;
   game.drawOfferBy = null;
+
+  // short grace period so players who refresh still see the result
+  setTimeout(() => deleteGame(game.id), FINISHED_GAME_TTL_MS).unref();
 };
 
 // after a move, end the game if the board says so
@@ -79,6 +86,7 @@ export const createGame = (user) => {
     reason: null,
     drawOfferBy: null,
     createdAt: new Date().toISOString(),
+    startedAt: null,
   };
   saveGame(game);
   return toState(game);
@@ -92,6 +100,7 @@ export const joinGame = (id, user) => {
   if (!color && game.status === 'waiting') {
     game.black = user;
     game.status = 'active';
+    game.startedAt = new Date().toISOString();
     color = 'b';
   }
 

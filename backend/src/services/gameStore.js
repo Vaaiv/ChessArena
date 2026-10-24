@@ -7,4 +7,6 @@ export const findGame = (id) => games.get(id);
 
 export const listGames = () => [...games.values()];
 
+export const deleteGame = (id) => games.delete(id);
+
 export const clearGames = () => games.clear();

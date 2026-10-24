@@ -17,5 +17,26 @@ model User {
   email        String   @unique
   passwordHash String
   createdAt    DateTime @default(now())
+
+  gamesAsWhite Game[] @relation("WhitePlayer")
+  gamesAsBlack Game[] @relation("BlackPlayer")
+}
+
+// a finished game, saved for history and replays
+model Game {
+  id        String   @id // same id the live game had
+  whiteId   String
+  blackId   String
+  white     User     @relation("WhitePlayer", fields: [whiteId], references: [id], onDelete: Cascade)
+  black     User     @relation("BlackPlayer", fields: [blackId], references: [id], onDelete: Cascade)
+  result    String   // '1-0' | '0-1' | '1/2-1/2'
+  reason    String   // 'checkmate' | 'resignation' | ...
+  moves     String[] // SAN moves in order, e.g. ['e4', 'e5'] — enough to replay the game
+  pgn       String
+  startedAt DateTime
+  endedAt   DateTime @default(now())
+
+  @@index([whiteId])
+  @@index([blackId])
 }
 
