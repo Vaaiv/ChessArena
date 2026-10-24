@@ -22,8 +22,7 @@ const toState = (game) => ({
   fen: game.chess.fen(),
   turn: game.chess.turn(),        // 'w' or 'b'
   isCheck: game.chess.isCheck(),
-  history: game.chess.history(),  // SAN moves, e.g. ['e4', 'e5']
-  pgn: game.chess.pgn(),
+  history: [...game.moves],       // SAN moves, e.g. ['e4', 'e5']
   createdAt: game.createdAt,
   startedAt: game.startedAt,      // when black joined, null while waiting
 });
@@ -79,6 +78,7 @@ export const createGame = (user) => {
   const game = {
     id: randomUUID(),
     chess: new Chess(),
+    moves: [], // our own SAN list: chess.history() replays the whole game on every call (slow)
     white: user,
     black: null,
     status: 'waiting',
@@ -134,6 +134,7 @@ export const applyMove = (id, userId, { from, to, promotion }) => {
     throw new HttpError(400, `Illegal move: ${from} to ${to}`);
   }
 
+  game.moves.push(move.san);
   game.drawOfferBy = null; // moving declines any pending draw offer
   checkBoardResult(game);
 

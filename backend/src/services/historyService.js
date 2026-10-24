@@ -7,6 +7,10 @@ const players = {
   black: { select: { id: true, username: true } },
 };
 
+// ['e4', 'e5', 'Nf3'] → '1. e4 e5 2. Nf3'
+const toPgn = (moves) =>
+  moves.map((san, i) => (i % 2 === 0 ? `${i / 2 + 1}. ${san}` : san)).join(' ');
+
 // game = finished game state from gameService
 export const saveFinishedGame = (game) =>
   prisma.game.create({
@@ -17,7 +21,7 @@ export const saveFinishedGame = (game) =>
       result: game.result,
       reason: game.reason,
       moves: game.history,
-      pgn: game.pgn,
+      pgn: toPgn(game.history),
       startedAt: game.startedAt,
     },
   });

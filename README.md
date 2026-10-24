@@ -6,7 +6,7 @@ Real-time multiplayer chess: Node.js, Express, Socket.io, PostgreSQL (Supabase +
 - [x] Auth: signup/login with bcrypt + JWT, users in PostgreSQL
 - [x] Real-time multiplayer with Socket.io: rooms, white/black players, turns, spectators, resign, draws
 - [x] Game history in PostgreSQL: finished games (players, result, moves) are saved for history and replay; live games leave memory 1 minute after they end
-- [ ] Load test (concurrent games, latency)
+- [x] Load test (concurrent games, latency) — see below
 - [ ] React frontend
 - [ ] Deployment (Vercel, AWS EC2, S3)
 
@@ -40,6 +40,23 @@ backend/
     ├── sockets/gameSocket.js      # real-time events
     └── utils/httpError.js         # error with HTTP status
 ```
+
+### Load test
+`scripts/loadTest.js` logs in 2 players per game, plays random legal games concurrently over Socket.io and measures **move sync latency**: the time from a player sending a move until the opponent receives it.
+
+```bash
+npm run dev                                   # terminal 1
+npm run loadtest -- --games 50 --plies 60     # terminal 2 (add --url to test a deployed server)
+```
+
+Local results (server and clients on one Windows laptop, so no internet latency included):
+
+| Concurrent games | Players | Moves | p50 | p95 | p99 | max |
+|---|---|---|---|---|---|---|
+| 25 | 50 | 1,500 | 2.2 ms | 5.3 ms | 7.6 ms | 17.4 ms |
+| 50 | 100 | 3,000 | 2.6 ms | 7.9 ms | 12.2 ms | 16.4 ms |
+
+Fix found by profiling: `chess.history()` / `chess.pgn()` replay the whole game on each call (~6 ms each at 60 moves), so the server keeps its own move list instead — server time per move dropped from ~12 ms to ~0.35 ms.
 
 ### REST API
 | Method | Path | Body / headers | Response |

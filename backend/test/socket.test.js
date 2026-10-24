@@ -169,6 +169,7 @@ test('finished games are saved to history and can be replayed', async () => {
   const { status, body: replay } = await getJson(`/api/history/${gameId}`, tokens.carol);
   assert.equal(status, 200);
   assert.deepEqual(replay.moves, ['f3', 'e5', 'g4', 'Qh4#']);
+  assert.equal(replay.pgn, '1. f3 e5 2. g4 Qh4#');
   assert.equal(replay.black.username, `${tag}_bob`);
   assert.equal(replay.whiteId, undefined);
 });
